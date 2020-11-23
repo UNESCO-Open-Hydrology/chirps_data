@@ -9,8 +9,9 @@ Licence : MIT 2020 (c) Open Water Network
 # imports
 from datetime import datetime, timedelta
 import os
-import requests
-from tqdm import tqdm
+import wget
+from multiprocessing import Pool
+
 
 # functions
 
@@ -28,16 +29,14 @@ def download_file(url, save_path):
     save_dir = os.path.dirname(save_path)
     save_fname = "{0}/{1}".format(save_dir, fname)
 
-    response = requests.get(url, stream=True)
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
-    with open(save_fname, "wb") as handle:
-        for data in tqdm(response.iter_content()):
-            handle.write(data)
+    wget.download(url, save_fname)
 
 
 # provide the number of years here
 years = range(1984, 2020)
+workers = 32
 
 if __name__ == '__main__':
     one_day = timedelta(days=1)
@@ -53,10 +52,10 @@ if __name__ == '__main__':
             mm="0{0}".format(
                 current_date.month) if current_date.month < 10 else current_date.month,
             dd="0{0}".format(current_date.day) if current_date.day < 10 else current_date.day)
-        urls.append(url)
+        urls.append((url, save_dir[0]))
         current_date += one_day
         print(current_date)
 
-    for file in urls:
-        print("downloading {0}".format(file_name(file)), end="")
-        download_file(file, save_dir[0])
+    pool = Pool(workers)
+    pool.starmap(download_file, urls)
+    pool.terminate()
